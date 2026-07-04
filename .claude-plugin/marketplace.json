@@ -1,0 +1,12 @@
+{
+  "name": "agentic-scaffold",
+  "owner": { "name": "Ivan Spirandelli" },
+  "description": "Personal marketplace for the agentic engineering scaffold.",
+  "plugins": [
+    {
+      "name": "scaffold",
+      "source": "./",
+      "description": "Spec-driven autonomous development pipeline."
+    }
+  ]
+}

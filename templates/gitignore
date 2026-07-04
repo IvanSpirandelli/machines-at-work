@@ -1,0 +1,4 @@
+# repo subdirectories are their own git repos — add each here, e.g.:
+# app/
+.claude/settings.local.json
+.DS_Store
