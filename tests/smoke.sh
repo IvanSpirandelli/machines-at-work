@@ -61,6 +61,21 @@ grep -q "unclear spec" NEEDS_HUMAN.md || fail "no NEEDS_HUMAN entry"
 rm app/ok.txt && git -C app add -A && git -C app -c user.email=t@t -c user.name=t commit -qm "break verify"
 "$SCAFFOLD/scripts/task.sh" done "$id2" >/dev/null 2>&1 && fail "done must refuse red verify" || true
 
+# --- no-arg verify must run every repo (regression: "${@:-$REPOS}" collapsed
+# multi-repo REPOS into one word, silently verifying nothing)
+WS2="$TMP/ws2"; mkdir -p "$WS2/a" "$WS2/b"
+cat > "$WS2/agents.env" <<'EOF'
+PROJECT_NAME=smoke2
+REPOS="a b"
+REPO_a=a
+REPO_b=b
+VERIFY_a="touch ran_a"
+VERIFY_b="touch ran_b"
+EOF
+(cd "$WS2" && "$SCAFFOLD/scripts/verify.sh" >/dev/null) || fail "two-repo verify should pass"
+[ -f "$WS2/a/ran_a" ] && [ -f "$WS2/b/ran_b" ] || fail "no-arg verify skipped a repo"
+cd "$WS"
+
 # --- guard hook
 g() { echo "$1" | python3 "$SCAFFOLD/hooks/guard.py" >/dev/null 2>&1; }
 g '{"tool_name":"Bash","tool_input":{"command":"git push --force origin x"}}' && fail "guard: force push allowed" || true

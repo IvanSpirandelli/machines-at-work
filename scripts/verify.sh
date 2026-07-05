@@ -5,7 +5,8 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 failed=""
-for repo in "${@:-$REPOS}"; do
+[ $# -gt 0 ] || set -- $REPOS
+for repo in "$@"; do
   echo "── verify: $repo"
   if (cd "$(repo_path "$repo")" && eval "$(verify_cmd "$repo")"); then
     echo "── PASS: $repo"
