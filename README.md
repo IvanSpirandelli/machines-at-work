@@ -5,7 +5,7 @@ A Claude Code plugin that turns a spec file into working software through a veri
 ## Install (once)
 
 ```
-/plugin marketplace add /Users/ivanspirandelli/a-project-called-life/code-projects/agentic-engineering-scaffold
+/plugin marketplace add [path-to-cloned-repo]
 /plugin install scaffold@agentic-scaffold
 ```
 
