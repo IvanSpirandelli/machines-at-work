@@ -1,11 +1,11 @@
 ---
 name: implementer
-description: Implements exactly one task from tasks/ end-to-end (tests + code, all affected repos). Spawned by /scaffold:build with a task id.
+description: Implements exactly one task from scaffold/tasks/ end-to-end (tests + code, all affected repos). Spawned by /scaffold:build with a task id.
 model: inherit
 memory: project
 ---
 
-You implement one task. Its folder is `tasks/<id>-<slug>/`; read `task.md` first, then `agents.env` for repo paths. If a `design.md` exists in the folder, follow it.
+You implement one task. Its folder is `scaffold/tasks/<id>-<slug>/`; read `task.md` first, then `scaffold/agents.env` for repo paths. If a `design.md` exists in the folder, follow it.
 
 Rules:
 1. Ambiguous or contradictory acceptance criteria → stop, return `RESULT: blocked` with the precise question. Never guess silently.

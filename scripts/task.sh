@@ -9,10 +9,11 @@ usage() { grep '^# Usage' "$0" | cut -c3-; exit 1; }
 cmd_new() {
   local title="${1:?usage: task.sh new \"<title>\" [repos]}"
   local repos="${2:-$REPOS}"
-  local last id slug dir
+  local last id slug dir spec
   last=$(ls "$TASKS" 2>/dev/null | grep -E '^[0-9]{4}-' | sort | tail -1 | cut -d- -f1 || true)
   id=$(printf '%04d' $((10#${last:-0} + 1)))
   slug=$(echo "$title" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-|-$//g' | cut -c1-40)
+  spec=$(git -C "$WS" log -1 --format=%h -- specs 2>/dev/null) || spec=""
   dir="$TASKS/$id-$slug"
   mkdir -p "$dir"
   cat > "$dir/task.md" <<EOF
@@ -21,6 +22,7 @@ cmd_new() {
 Status: todo
 Repos: $repos
 Branch: task/$id-$slug
+Spec: ${spec:--}
 Commits: -
 Rounds: 0
 Cost: -
@@ -101,6 +103,12 @@ cmd_done() {
   set_field "$md" Status done
   set_field "$md" Commits "${shas# }"
   echo "- $id · $title ·${shas:- no changes}" >> "$TASKS/_log.md"
+  if git -C "$WS" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    # snapshot workspace state (spec/task history for /retro)
+    for p in tasks specs NEEDS_HUMAN.md; do [ -e "$WS/$p" ] && git -C "$WS" add "$p"; done
+    git -C "$WS" diff --cached --quiet || git -C "$WS" commit -qm "task $id done: $title" \
+      || echo "WARN: workspace snapshot commit failed" >&2
+  fi
   echo "done $id →${shas:- no changes}"
 }
 

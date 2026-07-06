@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Headless driver: fresh Claude context per task, deterministic task selection,
-# hard iteration + cost caps. Run from the workspace root.
+# hard iteration + cost caps. Run from the project root.
 # Usage: MAX_TASKS=5 MAX_COST_USD=15 loop.sh
 set -euo pipefail
 SCRIPTS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -2,11 +2,13 @@
 # Shared helpers. Source, don't execute.
 set -euo pipefail
 
-# Walk up from cwd to find the workspace root (dir containing agents.env).
+# Walk up from cwd to find the workspace (dir containing agents.env — either
+# directly or in a scaffold/ child, so it's found from the project root and repos).
 find_workspace() {
   local dir="$PWD"
   while [ "$dir" != "/" ]; do
     [ -f "$dir/agents.env" ] && { echo "$dir"; return 0; }
+    [ -f "$dir/scaffold/agents.env" ] && { echo "$dir/scaffold"; return 0; }
     dir="$(dirname "$dir")"
   done
   echo "ERROR: no agents.env found between $PWD and /" >&2

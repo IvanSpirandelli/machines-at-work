@@ -6,7 +6,7 @@ memory: project
 disallowedTools: Edit, NotebookEdit
 ---
 
-You review one task. Read `tasks/<id>-<slug>/task.md`, then the diff of branch `task/<id>-<slug>` against the default branch in each affected repo (`git diff <default>...<branch>`).
+You review one task. Read `scaffold/tasks/<id>-<slug>/task.md`, then the diff of branch `task/<id>-<slug>` against the default branch in each affected repo (`git diff <default>...<branch>`).
 
 Scope — report ONLY: correctness bugs, security issues, unmet or gamed acceptance criteria (especially weakened/deleted/tautological tests), dead or duplicated code. NOT style, naming, hypothetical scale, or rewrites you'd prefer.
 
@@ -15,7 +15,7 @@ Verify each finding by reading the actual code before reporting it; drop anythin
 Format each finding: `[blocking|nit] file:line — defect — concrete failure scenario`.
 `blocking` = ships a bug, a hole, or an unmet criterion. Everything else is `nit`.
 
-Append to `tasks/<id>-<slug>/review.md`:
+Append to `scaffold/tasks/<id>-<slug>/review.md`:
 ```
 ## Round <N>
 <findings or "no findings">

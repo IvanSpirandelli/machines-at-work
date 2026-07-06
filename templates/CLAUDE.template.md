@@ -1,10 +1,10 @@
 # Workspace: {{PROJECT_NAME}}
 
-Scaffold workspace. Product spec: `spec.md`. Task state (single source of truth): `tasks/` — status lives in each `task.md`; digest in `tasks/_log.md`. Config: `agents.env`. Escalations: `NEEDS_HUMAN.md`.
+Scaffold workspace. Product spec: `scaffold/specs/` (living documents — extend and re-run `/scaffold:plan`; versions live in this repo's git history). Task state (single source of truth): `scaffold/tasks/` — status lives in each `task.md`; digest in `tasks/_log.md`. Config: `scaffold/agents.env`. Escalations: `scaffold/NEEDS_HUMAN.md`.
 
 Pipeline: `/scaffold:plan` → `/scaffold:build` (or `scripts/loop.sh` headless). Mechanics (branching, merging, verification) are scripts under the scaffold plugin — never do them by hand.
 
 Rules:
 - Never commit to the default branch directly; `task.sh done` merges.
 - Never mark work done with a red `verify.sh`.
-- Repos: see `agents.env`. Workspace files (spec, tasks) are versioned here, code lives in the repo subdirectories.
+- Repos: see `scaffold/agents.env`. Scaffold state is versioned by this root repo; code lives in the top-level repo directories (each its own git repo, ignored here).

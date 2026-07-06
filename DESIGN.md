@@ -9,7 +9,7 @@ The intuitive design is an org chart of specialist agents (supervisor, frontend/
 So the spine is:
 
 ```
-spec.md → /plan → tasks/NNNN-slug/ → per task:
+specs/ → /plan → tasks/NNNN-slug/ → per task:
   fresh implementer (TDD) → verify.sh (deterministic gate) →
   fresh reviewer (≤2 rounds) → squash-merge (one commit/repo) →
   digest to tasks/_log.md → next task
@@ -40,11 +40,13 @@ Everything mechanical is a script; LLMs are invoked only where judgment is requi
 5. **Review converges by construction.** Findings typed `[blocking|nit]`; nits are logged, not re-looped; max 2 rounds; still blocking → `task.sh block` escalates to human. Never an unbounded ping-pong.
 6. **Escalation is a first-class outcome.** Stuck detection (blocked result, failed verify loop, round cap, budget cap) → status `blocked`, entry in NEEDS_HUMAN.md, `notify.sh`. An autonomous system without a designed exit thrashes.
 7. **agents.env is generic and preflighted.** Named repos (`REPOS="frontend backend"`), not a hardcoded frontend/backend topology — works for CLI tools, libraries, monorepos. `preflight.sh` validates it (repos exist, trees clean, verify green) before any agent runs; config is verified, not assumed.
-8. **Distribution = Claude Code plugin, per-project state = files in the workspace.** Cloning the scaffold into each project forks and drifts; submodules are friction. A plugin installs once, is enabled per project, propagates via `/plugin update`, and is consumed read-only. Project-specific bits (agents.env, spec.md, tasks/) live in the workspace.
+8. **Distribution = Claude Code plugin, per-project state = files in the workspace.** Cloning the scaffold into each project forks and drifts; submodules are friction. A plugin installs once, is enabled per project, propagates via `/plugin update`, and is consumed read-only. Project-specific bits (agents.env, specs/, tasks/) live in the workspace.
 9. **Self-improvement = self-*proposing*.** `/retro` mines review.md + human feedback.md for recurring failures and writes `proposals/` entries with evidence and a concrete diff against this repo. Human reviews and commits. Prompt changes are release-engineered like code.
 10. **Human comms: files first.** NEEDS_HUMAN.md + notify.sh (stub: macOS notification; add a Telegram/ntfy curl when async mobile approval is proven to be the bottleneck — don't build the messaging layer before the loop is validated).
 11. **Two drive modes, same contracts.** Interactive: you run `/plan` then `/build` in a session. Headless: `scripts/loop.sh` runs `claude -p "/build <id>"` per task with iteration/cost caps — fresh context per task (the ralph insight) with deterministic task selection.
 12. **Budgets are hard stops.** loop.sh caps tasks per run and cost per run (parses `total_cost_usd`); per-task cost is recorded in task.md so /retro sees spend, not just outcome.
+13. **Spec iteration = edit `specs/` in place, replan the delta.** No spec_2 files: versions live in the workspace repo's git history (`task.sh done` snapshots workspace state; /plan commits spec changes before planning). Each task.md records the spec commit it came from (`Spec:` field), and code commits carry `Task-Id` — so /retro can trace cross-version rework and separate misunderstanding (pipeline signal) from changed requirements (product evolution, not actionable).
+14. **Repos and scaffold state are siblings under the project root.** State lives in `scaffold/` (agents.env, specs/, tasks/, NEEDS_HUMAN.md); code repos are top-level dirs referenced as `../<repo>`; the root keeps only CLAUDE.md + .claude/. `find_workspace` probes `scaffold/agents.env` too, so scripts work from the root, the state dir, or inside a repo. Flat layouts (agents.env at the root) keep working.
 
 ## Steelman we accepted
 
