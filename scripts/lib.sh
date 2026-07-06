@@ -49,3 +49,15 @@ set_field() { # set_field <task.md> <Field> <value>
 }
 
 task_title() { head -1 "$1" | sed 's/^# [0-9]* · //'; }
+
+limit_wait() { # limit_wait <claude output> -> seconds to wait, or rc 1 if not a usage/rate limit
+  echo "$1" | grep -qiE 'usage limit|rate.?limit|(hour|weekly|session) limit' || return 1
+  local reset now
+  reset=$(echo "$1" | grep -oE '\|[0-9]{10}' | head -1 | tr -d '|' || true)
+  now=$(date +%s)
+  if [ -n "$reset" ] && [ "$reset" -gt "$now" ] && [ $((reset - now)) -lt $((8 * 86400)) ]; then
+    echo $((reset - now + 60))   # buffer past the advertised reset
+  else
+    echo "${LIMIT_BACKOFF:-1800}"
+  fi
+}

@@ -60,8 +60,18 @@ grep -q "unclear spec" scaffold/NEEDS_HUMAN.md || fail "no NEEDS_HUMAN entry"
 
 # --- red verify blocks done
 "$SCAFFOLD/scripts/task.sh" start "$id2" >/dev/null
+"$SCAFFOLD/scripts/task.sh" start "$id2" >/dev/null || fail "start must resume an in-progress task"
+git -C app rev-parse --abbrev-ref HEAD | grep -q "task/0002" || fail "resume not on task branch"
 rm app/ok.txt && git -C app add -A && git -C app -c user.email=t@t -c user.name=t commit -qm "break verify"
 "$SCAFFOLD/scripts/task.sh" done "$id2" >/dev/null 2>&1 && fail "done must refuse red verify" || true
+
+# --- limit_wait: parses reset epoch, falls back to LIMIT_BACKOFF, ignores other errors
+w=$(bash -c "source '$SCAFFOLD/scripts/lib.sh'; limit_wait 'Claude AI usage limit reached|$(( $(date +%s) + 600 ))'")
+{ [ "$w" -ge 600 ] && [ "$w" -le 700 ]; } || fail "limit_wait epoch parse gave $w"
+w=$(bash -c "source '$SCAFFOLD/scripts/lib.sh'; LIMIT_BACKOFF=42 limit_wait '5-hour limit reached'")
+[ "$w" = 42 ] || fail "limit_wait fallback gave $w"
+bash -c "source '$SCAFFOLD/scripts/lib.sh'; limit_wait 'ordinary task failure'" >/dev/null \
+  && fail "limit_wait matched non-limit output" || true
 
 # --- no-arg verify must run every repo (regression: "${@:-$REPOS}" collapsed
 # multi-repo REPOS into one word, silently verifying nothing); flat layout

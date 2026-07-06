@@ -41,16 +41,22 @@ EOF
 }
 
 cmd_start() {
-  local id="${1:?task id}" dir md branch repo path
+  local id="${1:?task id}" dir md branch repo path status
   dir=$(task_dir "$id"); md="$dir/task.md"
-  [ "$(get_field "$md" Status)" = "todo" ] || { echo "ERROR: task $id is not todo" >&2; exit 1; }
+  status=$(get_field "$md" Status)
+  [ "$status" = "todo" ] || [ "$status" = "in-progress" ] \
+    || { echo "ERROR: task $id is $status, not startable" >&2; exit 1; }
   branch=$(get_field "$md" Branch)
   for repo in $(get_field "$md" Repos); do
     path=$(repo_path "$repo")
-    git -C "$path" diff --quiet && git -C "$path" diff --cached --quiet \
-      || { echo "ERROR: $repo has uncommitted changes" >&2; exit 1; }
-    git -C "$path" checkout -q "$DEFAULT_BRANCH"
-    git -C "$path" checkout -qb "$branch"
+    if git -C "$path" rev-parse -q --verify "$branch" >/dev/null; then
+      git -C "$path" checkout -q "$branch"   # resume an interrupted task
+    else
+      git -C "$path" diff --quiet && git -C "$path" diff --cached --quiet \
+        || { echo "ERROR: $repo has uncommitted changes" >&2; exit 1; }
+      git -C "$path" checkout -q "$DEFAULT_BRANCH"
+      git -C "$path" checkout -qb "$branch"
+    fi
   done
   set_field "$md" Status in-progress
   echo "started $id on $branch"

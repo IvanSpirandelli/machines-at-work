@@ -20,7 +20,7 @@ mkdir my-product && cd my-product && claude
 # write scaffold/specs/spec.md
 /scaffold:plan                  # specs → sized, verifiable tasks
 /scaffold:build all             # interactive: implement → verify → review → merge
-scripts/loop.sh                 # headless: fresh context per task, cost/task caps
+scripts/loop.sh                 # headless: fresh context per task, cost/task caps, rides out usage limits
 ```
 
 Iterate: drop update notes (any shape) in `scaffold/specs/updates/` and re-run `/scaffold:plan` — it integrates them into the living spec (your words are committed verbatim first; you approve the spec diff), then plans only the uncovered delta. Editing `scaffold/specs/` directly works too. Old spec versions live in the workspace's git history, not as spec_2 files; each task.md records the spec commit it was planned from (`Spec:`), and `/scaffold:retro` uses cross-version rework as evidence.
