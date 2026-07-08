@@ -3,6 +3,8 @@
 # hard iteration + cost caps. On a Claude subscription the cost cap is skipped
 # (no per-token bill; cost is only an API-equiv estimate). A usage/rate-limit
 # exit pauses until the reset and retries the task instead of blocking it.
+# Out of credits (billing exhausted — doesn't reset on a timer) hard-stops with
+# exit 4; a human must top up or switch MODEL, so retrying is pointless.
 # A session that ends still in-progress (work committed but not merged) is
 # re-invoked to finish, up to MAX_RESUME times, before it's blocked.
 # DONE=pr: a red origin/DEFAULT_BRANCH (preflight exit 3) parks the loop and
@@ -88,6 +90,15 @@ while [ "$n" -lt "$MAX_TASKS" ]; do
       "$SCRIPTS/notify.sh" "loop.sh: usage limit — retrying task $id in $((wait / 60))m" || true
       sleep "$wait"
       continue
+    fi
+    if [ "$rc" -ne 0 ] && is_out_of_credits "$out"$'\n'"$(cat "$errf")"; then
+      # Out of credits doesn't reset on a timer, so waiting/retrying is useless.
+      # Park any WIP and hard-stop (exit 4) with an exact, actionable message
+      # rather than burning MAX_RETRIES on a condition only a human can clear.
+      park_wip "$id" "wip: interrupted, out of credits"
+      echo "── stopped: out of credits on $id — top up (/usage-credits) or switch model (MODEL=sonnet|fable)"
+      "$SCRIPTS/notify.sh" "loop.sh stopped: out of credits on $id — top up or switch model" || true
+      exit 4
     fi
     if [ "$rc" -ne 0 ]; then
       # Preserve the full failure and surface a concise reason from claude's JSON

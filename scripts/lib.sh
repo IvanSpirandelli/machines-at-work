@@ -51,6 +51,13 @@ set_field() { # set_field <task.md> <Field> <value>
 
 task_title() { head -1 "$1" | sed 's/^# [0-9]* · //'; }
 
+is_out_of_credits() { # rc 0 if <output> is a credit/billing exhaustion, not a
+  # timer-based limit. Anthropic's canonical message is "Your credit balance is
+  # too low to access the Anthropic API. … upgrade or purchase credits." These
+  # do NOT reset on a schedule (unlike limit_wait), so retrying is pointless.
+  echo "$1" | grep -qiE 'credit balance (is )?too low|purchase credits|insufficient (credit|funds)|out of (usage )?credits?'
+}
+
 limit_wait() { # limit_wait <claude output> -> seconds to wait, or rc 1 if not a usage/rate limit
   echo "$1" | grep -qiE 'usage limit|rate.?limit|(hour|weekly|session) limit' || return 1
   local reset now

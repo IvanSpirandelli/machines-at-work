@@ -1,7 +1,7 @@
 {
   "name": "scaffold",
   "displayName": "Agentic Engineering Scaffold",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Spec-driven autonomous development: verify-gated task loop with fresh-context implementer and reviewer.",
   "author": {
     "name": "Ivan Spirandelli"
