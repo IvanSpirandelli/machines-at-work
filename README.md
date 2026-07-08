@@ -45,10 +45,10 @@ Every script finds the workspace on its own by walking up from the current direc
 | `verify.sh [repo …]` | The deterministic quality gate: runs each repo's `VERIFY_<repo>` command from agents.env. No args = all repos. Run it any time; it changes nothing. |
 | `task.sh new "<title>" [repos]` | Create the next `NNNN-slug` task folder; prints the id. Then fill in Goal / Acceptance criteria (usually `/scaffold:plan` does this). |
 | `task.sh start <id>` | Check out the task branch in each affected repo (creates it from the default branch, or resumes an existing one). |
-| `task.sh next` / `task.sh status` | Print the first todo task id / the full task table. Read-only. |
+| `task.sh next` / `task.sh status` | Print the first actionable task id — a todo, or an in-progress one to resume (so a killed session's orphan is picked back up and its dependents wait) / the full task table. Read-only. |
 | `task.sh done <id>` | Finish a task: verify must be green, then `DONE=local` squash-merges one commit per repo; `DONE=pr` pushes the branch and opens a pre-reviewed PR (task parks at `Status: pr`). |
 | `task.sh sync` | `DONE=pr` only: complete pr-status tasks whose PRs merged (records merge SHA, digests to `_log.md`, deletes local branches); a PR closed without merging blocks the task. Preflight runs this for you. |
-| `task.sh block <id> "<reason>"` / `task.sh reopen <id>` | Escalate a task to NEEDS_HUMAN.md (+ notification) / put a blocked task back in play. |
+| `task.sh block <id> "<reason>"` / `task.sh reopen <id>` / `task.sh abandon <id>` | Escalate a task to NEEDS_HUMAN.md (+ notification) / put a task back in play (a branch with commits resumes as in-progress, an empty one is abandoned to todo) / clean-restart a task: un-strand its repos to the default branch and delete the branch (refuses if it holds unmerged commits), back to todo. |
 | `loop.sh` | Headless driver: runs `claude -p "/scaffold:build <id>"` with a fresh context per task. Caps via env vars: `MAX_TASKS` (default 5), `MAX_COST_USD` (15; skipped on a Claude subscription), `MAX_RESUME` (3 retries for sessions that die mid-task), `LIMIT_BACKOFF` / `UPSTREAM_BACKOFF` (seconds, default 1800). Run it from the project root. |
 | `notify.sh "<msg>"` | The human-comms seam: prints, plus a macOS notification; a Telegram curl is sketched in the script — wire it in when async approval becomes the bottleneck. |
 

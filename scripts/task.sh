@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Task lifecycle. Deterministic — no LLM involved.
-# Usage: task.sh new "<title>" [repos] | start <id> | next | status | done <id> | sync | block <id> "<reason>" | reopen <id>
+# Usage: task.sh new "<title>" [repos] | start <id> | next | status | done <id> | sync | block <id> "<reason>" | reopen <id> | abandon <id>
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
@@ -72,10 +72,14 @@ cmd_start() {
 }
 
 cmd_next() {
-  # Scan in id order. A blocked task gates its successors — stop and signal
-  # (exit 3) so no driver (loop.sh or an interactive /build) marches into a
-  # dependent that needs the missing prerequisite. Todos *before* the block
-  # still run. CONTINUE_ON_BLOCK=1 skips past it for independent task sets.
+  # Scan in id order and return the first actionable task — todo, or in-progress.
+  # Returning in-progress (an orphan from a killed session; task.sh start resumes
+  # its branch) does double duty: it self-heals a cold-start orphan AND gates the
+  # orphan's dependents, since a prerequisite counts as satisfied only once it is
+  # done/pr — an unfinished one sorts first and holds the queue. A blocked task
+  # gates the same way but needs a human, so stop and signal (exit 3) rather than
+  # hand it back. Todos *before* a block still run; CONTINUE_ON_BLOCK=1 skips past
+  # it for independent task sets.
   local d s
   for d in "$TASKS"/[0-9]*/; do
     [ -f "$d/task.md" ] || continue
@@ -84,7 +88,7 @@ cmd_next() {
       echo "next: blocked task $(basename "$d" | cut -d- -f1) gates the queue" >&2
       return 3
     fi
-    [ "$s" = "todo" ] && { basename "$d" | cut -d- -f1; return 0; }
+    { [ "$s" = "in-progress" ] || [ "$s" = "todo" ]; } && { basename "$d" | cut -d- -f1; return 0; }
   done
   return 1
 }
@@ -217,20 +221,37 @@ cmd_block() {
 }
 
 cmd_reopen() {
+  local id="${1:?task id}" dir md
+  dir=$(task_dir "$id"); md="$dir/task.md"
+  # A branch with commits is resumable work — reopen to in-progress and let
+  # task.sh start check it out. A branch with no commits (or none at all) is an
+  # empty orphan: abandon it (restore repos, delete branch) so it restarts clean
+  # instead of resuming an empty branch — the manual recovery this used to need.
+  if branch_has_commits "$id"; then
+    set_field "$md" Status in-progress; echo "reopened $id (branch has commits — resume)"; return
+  fi
+  cmd_abandon "$id"
+}
+
+cmd_abandon() { # discard an empty/unwanted task branch and reset to todo. Safe:
+  # git branch -d refuses a branch with unmerged commits, so committed work is
+  # never silently thrown away — merge it with task.sh done, or -D it by hand.
   local id="${1:?task id}" dir md branch repo path
   dir=$(task_dir "$id"); md="$dir/task.md"
   branch=$(get_field "$md" Branch)
   for repo in $(get_field "$md" Repos); do
     path=$(repo_path "$repo")
-    if git -C "$path" rev-parse -q --verify "$branch" >/dev/null; then
-      set_field "$md" Status in-progress; echo "reopened $id (branch exists)"; return
-    fi
+    git -C "$path" rev-parse -q --verify "$branch" >/dev/null || continue
+    [ "$(git -C "$path" rev-parse --abbrev-ref HEAD)" != "$branch" ] \
+      || git -C "$path" checkout -q "$DEFAULT_BRANCH"   # un-strand the repo
+    git -C "$path" branch -qd "$branch" 2>/dev/null \
+      || { echo "ERROR: $repo branch $branch has unmerged commits — task.sh done to merge, or delete by hand" >&2; exit 1; }
   done
   set_field "$md" Status todo
-  echo "reopened $id"
+  echo "abandoned $id → todo"
 }
 
 case "${1:-}" in
-  new|start|next|status|done|sync|block|reopen) c="$1"; shift; "cmd_$c" "$@" ;;
+  new|start|next|status|done|sync|block|reopen|abandon) c="$1"; shift; "cmd_$c" "$@" ;;
   *) usage ;;
 esac

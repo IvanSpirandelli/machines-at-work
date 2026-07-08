@@ -57,6 +57,24 @@ until "$SCRIPTS/preflight.sh"; do
   sleep "$wait"
 done
 
+# Cold-start reconcile: a session killed mid-task leaves an orphan in-progress
+# that a fresh run's task.sh next would otherwise skip. One with committed work is
+# resumed (task.sh next now returns in-progress); one with a zero-commit branch was
+# killed before any work landed — abandon it so its repo is restored to
+# DEFAULT_BRANCH and it restarts clean rather than resuming an empty branch. Either
+# way task.sh next gates its dependents until it reaches a terminal state.
+for d in "$TASKS"/[0-9]*/; do
+  [ -f "$d/task.md" ] || continue
+  [ "$(get_field "$d/task.md" Status)" = "in-progress" ] || continue
+  oid=$(basename "$d" | cut -d- -f1)
+  if branch_has_commits "$oid"; then
+    echo "── cold start: $oid is in-progress with commits — will resume"
+  else
+    echo "── cold start: $oid is in-progress but empty — abandoning to todo"
+    "$SCRIPTS/task.sh" abandon "$oid" >/dev/null
+  fi
+done
+
 while [ "$n" -lt "$MAX_TASKS" ]; do
   nrc=0; id=$("$SCRIPTS/task.sh" next) || nrc=$?
   if [ "$nrc" -ne 0 ]; then

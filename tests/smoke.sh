@@ -32,7 +32,7 @@ id=$("$SCAFFOLD/scripts/task.sh" new "Add greeting feature")
 [ "$("$SCAFFOLD/scripts/task.sh" next)" = "0001" ] || fail "next should return 0001"
 "$SCAFFOLD/scripts/task.sh" start "$id" >/dev/null
 git -C app rev-parse --abbrev-ref HEAD | grep -q "task/0001" || fail "not on task branch"
-"$SCAFFOLD/scripts/task.sh" next >/dev/null && fail "next should be empty while in-progress" || true
+[ "$("$SCAFFOLD/scripts/task.sh" next)" = "0001" ] || fail "next should return the in-progress task to resume it"
 
 # --- implement something on the branch
 echo "hello" > app/greeting.txt
@@ -109,6 +109,42 @@ verdict=$(grep '^VERDICT:' "$d3/review.md" | tail -1)
 "$SCAFFOLD/scripts/task.sh" done "$id3" >/dev/null || fail "approved work should merge"
 grep -q "Status: done" "$d3/task.md" || fail "id3 not done after merge"
 git -C app log -1 --format=%B | grep -q "Task-Id: $id3" || fail "id3 merge missing trailer"
+
+# --- cold-start orphan: task.sh next returns an in-progress task (resume) instead
+# of skipping it, so an orphan self-heals and gates its successors. The red-verify
+# test above left id2 (0002) in-progress with commits, ahead of the 0003 todo.
+[ "$("$SCAFFOLD/scripts/task.sh" next)" = "0002" ] \
+  || fail "next must return the in-progress task, not skip to a later todo"
+
+# a zero-commit orphan (killed before any work) → abandon resets to todo and
+# un-strands the repo back to DEFAULT_BRANCH
+orphan=$("$SCAFFOLD/scripts/task.sh" new "Orphan task")
+"$SCAFFOLD/scripts/task.sh" start "$orphan" >/dev/null   # in-progress, on task branch, 0 commits
+lib "branch_has_commits $orphan" && fail "orphan should have 0 commits" || true
+"$SCAFFOLD/scripts/task.sh" abandon "$orphan" >/dev/null
+grep -q "Status: todo" scaffold/tasks/"$orphan"-*/task.md || fail "abandon should reset to todo"
+[ "$(git -C app rev-parse --abbrev-ref HEAD)" = "main" ] || fail "abandon should un-strand the repo to main"
+git -C app rev-parse -q --verify "task/$orphan-orphan-task" >/dev/null && fail "abandon should delete the empty branch" || true
+
+# abandon must refuse to discard committed work (git branch -d, not -D)
+keep=$("$SCAFFOLD/scripts/task.sh" new "Keep work")
+"$SCAFFOLD/scripts/task.sh" start "$keep" >/dev/null
+echo data > app/keep.txt
+git -C app add . && git -C app -c user.email=t@t -c user.name=t commit -qm "real work"
+rc=0; "$SCAFFOLD/scripts/task.sh" abandon "$keep" >/dev/null 2>&1 || rc=$?
+[ "$rc" != 0 ] || fail "abandon must refuse a branch with unmerged commits"
+git -C app rev-parse -q --verify "task/$keep-keep-work" >/dev/null || fail "abandon must not delete a committed branch"
+grep -q "Status: in-progress" scaffold/tasks/"$keep"-*/task.md || fail "abandon refusal must leave status in-progress"
+
+# reopen: a committed branch resumes (in-progress); an empty branch abandons (todo)
+"$SCAFFOLD/scripts/task.sh" block "$keep" "reopen test" >/dev/null
+"$SCAFFOLD/scripts/task.sh" reopen "$keep" >/dev/null
+grep -q "Status: in-progress" scaffold/tasks/"$keep"-*/task.md || fail "reopen of a committed branch → in-progress"
+empty=$("$SCAFFOLD/scripts/task.sh" new "Empty branch")
+"$SCAFFOLD/scripts/task.sh" start "$empty" >/dev/null   # in-progress, 0 commits
+"$SCAFFOLD/scripts/task.sh" reopen "$empty" >/dev/null
+grep -q "Status: todo" scaffold/tasks/"$empty"-*/task.md || fail "reopen of an empty branch → todo"
+[ "$(git -C app rev-parse --abbrev-ref HEAD)" = "main" ] || fail "reopen-abandon should un-strand the repo"
 
 # --- no-arg verify must run every repo (regression: "${@:-$REPOS}" collapsed
 # multi-repo REPOS into one word, silently verifying nothing); flat layout
