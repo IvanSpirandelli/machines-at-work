@@ -8,7 +8,7 @@ wire it when needed." The loop is now validated (23 decisions, v0.10.0); async m
 Drive the scaffold from a phone by voice. A Telegram supergroup ("me and my agents") with **Topics**
 enabled is the control plane: one **forum topic per project**, created programmatically. A voice note in a
 project's topic → transcribed on the server → routed into that project's existing inbound door
-(`scaffold/specs/updates/`) → planned → built by `loop.sh`, with escalations and results reported **back into
+(`scaffold/updates/`) → planned → built by `loop.sh`, with escalations and results reported **back into
 the same topic**. A note in the "General" topic can spawn a new project (new topic + `init-project`).
 
 Everything runs on a **Hetzner Linux box** (always-on, the proper home for a long-poll daemon and for the
@@ -35,7 +35,7 @@ inbound daemon  (systemd service — DETERMINISTIC, a script):
       text?  transcript = message text
     → resolve message_thread_id → workspace via registry
     → hand {transcript, workspace|General} to `claude -p` orchestrator prompt   ← the one JUDGMENT call
-         feature  → write scaffold/specs/updates/<ts>.md → /scaffold:plan → (approve via reply) → launch loop.sh detached
+         feature  → write scaffold/updates/<ts>.md → /scaffold:plan → (approve via reply) → launch loop.sh detached
          new proj → createForumTopic → init-project in ~/projects/<name> → register mapping → greet in new topic
          status   → task.sh status → summarize → reply
          control  → approve pending plan · task.sh reopen <id> · stop loop
@@ -57,13 +57,13 @@ Mechanics (poll, download, transcribe, route, launch) are the script; *what a no
   `TELEGRAM_TOPIC_ID` into `scaffold/agents.env`; `notify.sh` sources the global creds + this topic id.
 
 ## Decisions (with the objection that shaped each)
-1. **Voice → `specs/updates/`, not a new inbound path.** *Objection:* doesn't a chat need its own command
-   grammar? No — the scaffold already accepts human notes of any shape in `specs/updates/` and `/plan`
-   integrates them (DESIGN #13). A transcript is just such a note. Reusing it means voice control inherits the
-   existing spec-diff-approval gate and cross-version rework tracking for free; no parallel intake to drift.
+1. **Voice → `updates/`, not a new inbound path.** *Objection:* doesn't a chat need its own command
+   grammar? No — the scaffold already accepts human notes of any shape in `scaffold/updates/` and `/plan`
+   turns them into tasks (DESIGN #13/#26). A transcript is just such a note. Reusing it means voice control inherits the
+   existing plan-approval gate and `Intent:`-note rework tracking for free; no parallel intake to drift.
 2. **The plan-approval gate becomes a reply, not a bypass.** *Objection:* async voice tempts auto-plan-and-
-   build. But the spec is the human's contract with the pipeline (DESIGN #13) — so the orchestrator replies
-   with the spec diff + planned task list and waits for an "approve"/"go" message before launching `loop.sh`.
+   build. But the approved plan is the human's contract with the pipeline (DESIGN #13/#26) — so the orchestrator replies
+   with the planned task list and waits for an "approve"/"go" message before launching `loop.sh`.
    Per-topic pending-approval state in the daemon; cheap, and keeps the one human gate that matters.
 3. **`loop.sh` runs detached; the topic is the progress feed.** *Objection:* a build outlives a chat turn.
    The daemon fires `loop.sh` for the target workspace in the background; the outbound leg (Phase 1) is what
@@ -100,7 +100,7 @@ Mechanics (poll, download, transcribe, route, launch) are the script; *what a no
   into `TELEGRAM_TOPIC_ID`. *Verify:* `notify.sh "hi"` from a project lands in its topic. Independently useful
   (escalations to your phone) before any inbound code exists. Bump plugin version; add to `tests/smoke.sh`.
 - **Phase 2 — inbound, one hand-registered project.** Daemon: long-poll → allowlist → `transcribe.sh` →
-  route one manually-registered topic → write `specs/updates/<ts>.md` → reply. *Verify:* a voice note in the
+  route one manually-registered topic → write `updates/<ts>.md` → reply. *Verify:* a voice note in the
   topic produces the update file with the right transcript and a reply.
 - **Phase 3 — orchestrator judgment + control.** The `claude -p` router: feature (plan → reply diff → approve
   → detached `loop.sh`), status, control. *Verify:* voice "add feature X" → planned → approved → built →
