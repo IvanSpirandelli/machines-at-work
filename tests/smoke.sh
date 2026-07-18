@@ -293,6 +293,20 @@ grep -q "hello from smoke" "$CURL_LOG" || fail "notify: message text not sent"
 "$MACHINES_AT_WORK/scripts/notify.sh" "no creds here" >/dev/null
 [ -s "$CURL_LOG" ] && fail "notify: hit telegram without creds" || true
 
+# --- inbound.sh: server drops raw messages into updates/.inbox/, inbound.sh
+# turns them into updates/ notes (oldest first) and drains the inbox. No inbox
+# (or an empty one) is a no-op, never an error.
+"$MACHINES_AT_WORK/scripts/inbound.sh" >/dev/null || fail "inbound: no inbox should be a no-op"
+mkdir -p "$WS/machines-at-work/updates/.inbox"
+echo "build the login page" > "$WS/machines-at-work/updates/.inbox/1600000000-42.md"
+echo "also add logout"      > "$WS/machines-at-work/updates/.inbox/1600000005-43.md"
+"$MACHINES_AT_WORK/scripts/inbound.sh" >/dev/null || fail "inbound: drain failed"
+[ -f "$WS/machines-at-work/updates/tg-1600000000-42.md" ] || fail "inbound: first note not created"
+grep -q "build the login page" "$WS/machines-at-work/updates/tg-1600000000-42.md" || fail "inbound: note text lost"
+[ -f "$WS/machines-at-work/updates/tg-1600000005-43.md" ] || fail "inbound: second note not created"
+[ -z "$(ls -A "$WS/machines-at-work/updates/.inbox")" ] || fail "inbound: inbox not drained"
+"$MACHINES_AT_WORK/scripts/inbound.sh" >/dev/null || fail "inbound: empty inbox should be a no-op"
+
 # --- guard hook
 g() { echo "$1" | python3 "$MACHINES_AT_WORK/hooks/guard.py" >/dev/null 2>&1; }
 g '{"tool_name":"Bash","tool_input":{"command":"git push --force origin x"}}' && fail "guard: force push allowed" || true

@@ -7,7 +7,7 @@ argument-hint: "[which note or area to plan, default: all unplanned]"
 
 Turn the notes in `machines-at-work/updates/` into tasks. Focus: $ARGUMENTS
 
-1. Commit any uncommitted notes as-written — the user's words stay in git history, and that history *is* the record of intent (there is no living spec document to maintain). Ignore `README.md`. If there are no notes to plan, ask the user what to build and stop.
+1. Drain the topic inbox: run `${CLAUDE_PLUGIN_ROOT}/scripts/inbound.sh` so any messages texted into this project's Telegram topic land as notes in `updates/` before you plan (no-op if none). Then commit any uncommitted notes as-written — the user's words stay in git history, and that history *is* the record of intent (there is no living spec document to maintain). Ignore `README.md`. If there are no notes to plan, ask the user what to build and stop.
 2. Read the notes, `machines-at-work/tasks/_log.md`, and `${CLAUDE_PLUGIN_ROOT}/scripts/task.sh status` output. Plan only what the notes ask for and is not already covered by a task — nor already present in the code: in a pre-existing codebase, check the repos before tasking described behavior.
 3. Draft the task list. Each task MUST have:
    - a goal one implementer can finish and verify in a single green run,
