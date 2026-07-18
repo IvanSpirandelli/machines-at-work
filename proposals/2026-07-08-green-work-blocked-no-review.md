@@ -1,6 +1,6 @@
 # Retro 2026-07-08 · complete, green work blocked because review never produced a verdict
 
-Proposal — **apply by hand in the scaffold repo** (`agentic-engineering-scaffold/scripts/{loop.sh,build skill}`);
+Proposal — **apply by hand in the machines-at-work repo** (`machines-at-work/scripts/{loop.sh,build skill}`);
 the plugin is read-only inside projects. Sibling to `2026-07-08-orphaned-in-progress-skip.md` — that retro's
 fix #1 (cold-start reconcile) shipped and worked here; this is the *next* failure the same run hit.
 

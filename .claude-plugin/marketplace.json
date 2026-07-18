@@ -1,10 +1,10 @@
 {
-  "name": "agentic-scaffold",
+  "name": "machines-at-work",
   "owner": { "name": "Ivan Spirandelli" },
-  "description": "Personal marketplace for the agentic engineering scaffold.",
+  "description": "Personal marketplace for Machines at Work.",
   "plugins": [
     {
-      "name": "scaffold",
+      "name": "machines-at-work",
       "source": "./",
       "description": "Spec-driven autonomous development pipeline."
     }

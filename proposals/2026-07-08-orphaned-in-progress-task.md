@@ -1,6 +1,6 @@
 # Retro 2026-07-08 · orphaned in-progress task skipped; dependent built out of order
 
-Proposal — **apply by hand in the scaffold repo** (`agentic-engineering-scaffold/scripts/{loop.sh,task.sh}`);
+Proposal — **apply by hand in the machines-at-work repo** (`machines-at-work/scripts/{loop.sh,task.sh}`);
 the plugin is read-only inside projects. Sibling to `2026-07-08-loop-error-handling.md` (a different
 failure mode: that one is *blocked* tasks + no-work crashes; this one is an *orphaned in-progress* task).
 
@@ -10,7 +10,7 @@ A loop run was interrupted (process killed) mid-iteration on **0037** (`Parametr
   pointed at the 0036 tip `10b2ee8`) — i.e. flipped to in-progress but the implementer never committed.
 - The **frontend repo was left checked out on `task/0037-…`** (stranded off `main`).
 - A fresh loop invocation then ran `task.sh next`, which returned **0038** — skipping the orphaned
-  in-progress 0037 — and began `/scaffold:build 0038`. **0038 `Depends on 0037`**, so it was building a
+  in-progress 0037 — and began `/machines-at-work:build 0038`. **0038 `Depends on 0037`**, so it was building a
   feature on top of a nonexistent prerequisite, in a repo parked on the empty 0037 branch.
 
 Two distinct weaknesses: (1) an orphaned in-progress task is silently skipped by `task.sh next` and never

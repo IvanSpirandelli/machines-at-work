@@ -1,6 +1,6 @@
-# Scaffold repo (plugin development)
+# Machines at Work repo (plugin development)
 
-You are editing the scaffold itself, not using it. Read `DESIGN.md` before changing behavior — every decision there has a reason.
+You are editing machines-at-work itself, not using it. Read `DESIGN.md` before changing behavior — every decision there has a reason.
 
 Rules:
 - Concision is a feature: agent/skill prompts earn every line ("would removing this cause a mistake?"). CLAUDE.mds < 200 lines.

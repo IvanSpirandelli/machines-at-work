@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """PreToolUse guard: deterministic safety rails.
 Blocks: force-push, push to main/master, destructive rm, and any edit to the
-scaffold plugin itself (self-modification must go through /scaffold:retro proposals).
+machines-at-work plugin itself (self-modification must go through /machines-at-work:retro proposals).
 Exit 2 = block (stderr goes to the agent). Exit 0 = allow.
 """
 import json
@@ -17,7 +17,7 @@ BASH_DENY = [
 ]
 
 def deny(reason: str) -> None:
-    print(f"BLOCKED by scaffold guard: {reason}", file=sys.stderr)
+    print(f"BLOCKED by machines-at-work guard: {reason}", file=sys.stderr)
     sys.exit(2)
 
 def main() -> None:
@@ -35,7 +35,7 @@ def main() -> None:
         plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT", "")
         path = os.path.realpath(tin.get("file_path", ""))
         if plugin_root and path.startswith(os.path.realpath(plugin_root) + os.sep):
-            deny("the scaffold plugin is read-only inside projects; use /scaffold:retro to propose changes")
+            deny("the machines-at-work plugin is read-only inside projects; use /machines-at-work:retro to propose changes")
 
     sys.exit(0)
 

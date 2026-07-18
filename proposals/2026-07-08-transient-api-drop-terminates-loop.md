@@ -1,6 +1,6 @@
 # Retro 2026-07-08 · a transient API drop terminated the whole headless loop
 
-Proposal — **apply by hand in the scaffold repo** (`agentic-engineering-scaffold/scripts/{loop.sh,lib.sh}`);
+Proposal — **apply by hand in the machines-at-work repo** (`machines-at-work/scripts/{loop.sh,lib.sh}`);
 the plugin is read-only inside projects. Sibling to `2026-07-08-loop-error-handling.md` (which added the
 *status=todo* transient-retry path) and `2026-07-08-green-work-blocked-no-review.md`. This is the gap those
 two left: a transient drop that lands **after** the task flips to in-progress kills the entire run.
@@ -34,7 +34,7 @@ retry — never against budget) and **out of credits** (park, clean `exit 4`). A
 error** is neither, so it falls through to the generic `rc -ne 0` path, and two things go wrong:
 
 1. **It's routed into bounded auto-resume, not transient-retry.** The transient-retry logic (from the sibling
-   retro) only fires when `status = todo`. But `/scaffold:build` runs `task.sh start` early, so by the drop
+   retro) only fires when `status = todo`. But `/machines-at-work:build` runs `task.sh start` early, so by the drop
    the task is **`in-progress`** — even with 0 commits. The in-progress branch treats a network blip as
    "session made progress, resume it," counting against `MAX_RESUME`, instead of "no work done → retry."
 2. **The loop terminated with rc=1 instead of surviving the blip.** Under `set -euo pipefail`, a command in

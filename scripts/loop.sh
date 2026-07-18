@@ -30,7 +30,7 @@ MAX_COST_USD="${MAX_COST_USD:-15}"
 MAX_RESUME="${MAX_RESUME:-3}"
 MAX_RETRIES="${MAX_RETRIES:-10}"
 RETRY_BACKOFF="${RETRY_BACKOFF:-60}"
-BUILD_SKILL="${BUILD_SKILL:-/scaffold:build}"
+BUILD_SKILL="${BUILD_SKILL:-/machines-at-work:build}"
 # Pin the model so a one-shot session never silently falls back to a cheaper
 # default. Friendly names map to what claude --model accepts.
 MODEL="${MODEL:-opus}"

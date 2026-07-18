@@ -1,6 +1,6 @@
 # Retro 2026-07-16 · retire the living spec; intent notes are the only input surface
 
-Proposal — **apply by hand in the scaffold repo** (the plugin is read-only inside projects).
+Proposal — **apply by hand in the machines-at-work repo** (the plugin is read-only inside projects).
 Touches `skills/{init-project,plan,retro}/SKILL.md`, `scripts/task.sh`, `templates/CLAUDE.template.md`,
 and DESIGN.md #13. Supersedes the pending init-spec-gap changes (they patched a workflow this removes).
 
@@ -39,8 +39,8 @@ document because there is no code yet. Once code exists, the document's three cl
 ## Proposed change
 
 ### 1) One flat input surface, no `specs/` tree
-Replace `scaffold/specs/` and its `specs/updates/` subfolder with a single flat folder of intent notes -
-`scaffold/updates/` (sibling of `tasks/`). No living document to maintain, no subfolder nesting. A note is
+Replace `machines-at-work/specs/` and its `specs/updates/` subfolder with a single flat folder of intent notes -
+`machines-at-work/updates/` (sibling of `tasks/`). No living document to maintain, no subfolder nesting. A note is
 the human's words; git history of the folder is the durable record of intent. Notes are consumed by `/plan`
 and deleted (or archived) - they are not accumulated into a standing document. `updates/` names what the
 folder is - a stream of consumed deltas - rather than `specs/`, which would keep re-summoning the
@@ -90,9 +90,9 @@ note for retro traceability. Remove the living-spec / `specs/updates/` / spec-di
 Implemented as changes 1–6:
 - `scripts/task.sh` — `snapshot_ws` and `cmd_new` read `updates/` not `specs/`; the task.md field is
   `Intent:` (last commit touching `updates/`) not `Spec:`.
-- `skills/plan/SKILL.md` — reads `scaffold/updates/` (ignores `README.md`), drops the absorb-into-spec step
+- `skills/plan/SKILL.md` — reads `machines-at-work/updates/` (ignores `README.md`), drops the absorb-into-spec step
   and spec-diff approval (the human approves the task plan), records `Intent:`, removes planned notes.
-- `skills/init-project/SKILL.md` — creates `scaffold/updates/README.md` (not `specs/spec.md`); onboarding
+- `skills/init-project/SKILL.md` — creates `machines-at-work/updates/README.md` (not `specs/spec.md`); onboarding
   tells the user to drop a first note.
 - `skills/retro/SKILL.md` — rework signal reads the `Intent:` note (`git show`) instead of a spec diff.
 - `templates/` — `spec.md` **deleted**, replaced by `updates-README.md` (keeps the WHEN/SHALL + out-of-scope
@@ -102,6 +102,6 @@ Implemented as changes 1–6:
 - `.claude-plugin/plugin.json` — 0.12.0 → 0.13.0.
 - `tests/smoke.sh` — asserts the `Intent:` field; full smoke run green.
 
-Migration (project mid-flight): rename `scaffold/specs/updates/*` up to `scaffold/updates/`, drop
-`scaffold/specs/spec.md`; leave old tasks' `Spec:` fields as historical (`/retro` reads whichever field a
+Migration (project mid-flight): rename `machines-at-work/specs/updates/*` up to `machines-at-work/updates/`, drop
+`machines-at-work/specs/spec.md`; leave old tasks' `Spec:` fields as historical (`/retro` reads whichever field a
 task carries). Supersedes the staged-but-unapplied `2026-07-15-init-spec-gap` changes — do not apply those.

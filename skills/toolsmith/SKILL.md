@@ -11,4 +11,4 @@ Build one tool for: $ARGUMENTS
 3. The tool must be self-verifying: clear usage line, loud failures, an example invocation that you run and show passing.
 4. Document it in ONE line in the workspace CLAUDE.md so agents discover it.
 
-Tools live in the project, never in the scaffold plugin.
+Tools live in the project, never in the machines-at-work plugin.

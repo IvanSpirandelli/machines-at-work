@@ -34,7 +34,7 @@ for repo in $REPOS; do
   fi
   verify_cmd "$repo" >/dev/null || err=1
 done
-[ -d "$TASKS" ] || { echo "FAIL: no tasks/ dir (run /scaffold:init-project)" >&2; err=1; }
+[ -d "$TASKS" ] || { echo "FAIL: no tasks/ dir (run /machines-at-work:init-project)" >&2; err=1; }
 [ "$err" -eq 0 ] || { echo "PREFLIGHT FAILED" >&2; exit 1; }
 
 # DONE=pr: complete tasks whose PRs merged since the last run

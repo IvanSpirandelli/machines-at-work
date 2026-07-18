@@ -4,7 +4,7 @@ description: Produce a concrete UI/UX design for one task before implementation.
 argument-hint: "<task-id>"
 ---
 
-Write `scaffold/tasks/<id>-<slug>/design.md` for task $ARGUMENTS. The implementer will follow it literally — be concrete, not aspirational.
+Write `machines-at-work/tasks/<id>-<slug>/design.md` for task $ARGUMENTS. The implementer will follow it literally — be concrete, not aspirational.
 
 Cover, tersely:
 1. Layout: components, hierarchy, spacing (ASCII sketch beats prose).

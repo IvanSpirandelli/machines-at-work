@@ -9,7 +9,7 @@ Target: $ARGUMENTS (empty or `all` → use `task.sh next`).
 Scripts: `${CLAUDE_PLUGIN_ROOT}/scripts/`. You orchestrate; you do not write code yourself.
 
 1. `preflight.sh --quick`; then `task.sh start <id>`.
-2. Spawn the `implementer` agent: "Implement task <id>. Folder: scaffold/tasks/<id>-<slug>/". If UI-heavy and no design.md exists, run /scaffold:design first.
+2. Spawn the `implementer` agent: "Implement task <id>. Folder: machines-at-work/tasks/<id>-<slug>/". If UI-heavy and no design.md exists, run /machines-at-work:design first.
 3. `RESULT: blocked` → `task.sh block <id> "<question>"`, report to user, stop this task.
 4. Spawn the `reviewer` agent on the task — **always**, and always let it write a verdict to `review.md`, even on a resume where the branch is already complete and step 2 was a no-op. A branch that already looks finished still flows review → done; never stop at Status `in-progress`. Then:
    - `VERDICT: approve` → step 5.
