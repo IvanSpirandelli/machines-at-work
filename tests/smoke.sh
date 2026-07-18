@@ -6,6 +6,10 @@ SCAFFOLD="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 fail() { echo "SMOKE FAIL: $*" >&2; exit 1; }
+# Seal the whole run from any real ~/.agent-orchestrator/telegram.env: task.sh
+# fires notify.sh during the lifecycle, and a live creds file would send real
+# messages. The dedicated notify section below sets its own creds inline.
+export TELEGRAM_ENV=/nonexistent
 
 # --- project root with one fake repo, state in scaffold/ (default layout)
 WS="$TMP/ws"; mkdir -p "$WS/app" "$WS/scaffold/tasks"

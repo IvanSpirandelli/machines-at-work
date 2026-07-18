@@ -64,8 +64,6 @@ scripts/      task.sh (lifecycle) · verify.sh (gate) · preflight.sh ·
 hooks/        guard.py — blocks force-push, push-to-default, destructive rm,
               plugin self-modification
 templates/    project-side starter files
-orchestrator/ Telegram control plane (cross-project, NOT plugin code) —
-              tg.sh + one-time community/topic setup in orchestrator/README.md
 DESIGN.md     every decision + why
 ```
 
