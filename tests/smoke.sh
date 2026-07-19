@@ -307,6 +307,38 @@ grep -q "build the login page" "$WS/machines-at-work/updates/tg-1600000000-42.md
 [ -z "$(ls -A "$WS/machines-at-work/updates/.inbox")" ] || fail "inbound: inbox not drained"
 "$MACHINES_AT_WORK/scripts/inbound.sh" >/dev/null || fail "inbound: empty inbox should be a no-op"
 
+# --- linear.sh: one issue per plan via the issueCreate GraphQL mutation, curl
+# stubbed to return canned responses. Opt-in feature; only exercised where jq is
+# present (linear.sh needs it). $TMP/bin is on PATH from the pr-mode section.
+if command -v jq >/dev/null; then
+  cat > "$TMP/bin/curl" <<'EOF'
+#!/usr/bin/env bash
+case "$*" in
+  *issueCreate*) echo "$LINEAR_ISSUE_RESP" ;;
+  *teams*)       echo "$LINEAR_TEAMS_RESP" ;;
+  *) exit 1 ;;
+esac
+EOF
+  chmod +x "$TMP/bin/curl"
+  export LINEAR_ENV=/nonexistent \
+    LINEAR_ISSUE_RESP='{"data":{"issueCreate":{"issue":{"identifier":"ENG-123","url":"https://linear.app/acme/issue/ENG-123"}}}}' \
+    LINEAR_TEAMS_RESP='{"data":{"teams":{"nodes":[{"id":"team-uuid"}]}}}'
+  # missing API key → loud error, never a silent no-op
+  LINEAR_TEAM_KEY=ENG "$MACHINES_AT_WORK/scripts/linear.sh" create "t" "b" >/dev/null 2>&1 \
+    && fail "linear: missing LINEAR_API_KEY must error" || true
+  # happy path → IDENTIFIER<TAB>url, key first, so /plan can prefix feature slugs
+  out=$(LINEAR_API_KEY=tok LINEAR_TEAM_KEY=ENG "$MACHINES_AT_WORK/scripts/linear.sh" create "Add payments" "- [ ] one")
+  [ "$(printf '%s' "$out" | cut -f1)" = "ENG-123" ] || fail "linear: identifier not returned ($out)"
+  printf '%s' "$out" | grep -q "linear.app/acme/issue/ENG-123" || fail "linear: url not returned ($out)"
+  # unknown team key → error (issueCreate never reached)
+  LINEAR_TEAMS_RESP='{"data":{"teams":{"nodes":[]}}}' \
+    LINEAR_API_KEY=tok LINEAR_TEAM_KEY=NOPE "$MACHINES_AT_WORK/scripts/linear.sh" create "t" "b" >/dev/null 2>&1 \
+    && fail "linear: unknown team must error" || true
+  echo "[smoke] linear.sh ok"
+else
+  echo "[smoke] linear.sh skipped (no jq)"
+fi
+
 # --- guard hook
 g() { echo "$1" | python3 "$MACHINES_AT_WORK/hooks/guard.py" >/dev/null 2>&1; }
 g '{"tool_name":"Bash","tool_input":{"command":"git push --force origin x"}}' && fail "guard: force push allowed" || true
