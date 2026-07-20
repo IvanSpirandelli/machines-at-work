@@ -21,16 +21,14 @@ for repo in $REPOS; do
   git -C "$path" rev-parse -q --verify "$DEFAULT_BRANCH" >/dev/null \
     || { echo "FAIL: $repo has no branch $DEFAULT_BRANCH" >&2; err=1; }
   if [ "$DONE" = "pr" ]; then
-    # Fresh base: tasks must branch from current upstream, so fast-forward the
-    # default branch whenever the repo sits on it (a task branch is left alone).
+    # Base freshening moved to plan kickoff (freshen.sh, decision #29) so a build
+    # run never advances the default branch mid-flight — no repo is yanked onto a
+    # moved base while a PR is open. Preflight only validates origin and fetches
+    # the ref the upstream-red check (below) and task.sh sync compare against.
     git -C "$path" remote get-url origin >/dev/null 2>&1 \
       || { echo "FAIL: $repo has no origin remote (required by DONE=pr)" >&2; err=1; continue; }
     git -C "$path" fetch -q origin "$DEFAULT_BRANCH" \
       || { echo "FAIL: $repo: fetch origin/$DEFAULT_BRANCH failed" >&2; err=1; continue; }
-    if [ "$(git -C "$path" rev-parse --abbrev-ref HEAD)" = "$DEFAULT_BRANCH" ]; then
-      git -C "$path" merge -q --ff-only "origin/$DEFAULT_BRANCH" \
-        || { echo "FAIL: $repo: $DEFAULT_BRANCH diverged from origin — reconcile manually" >&2; err=1; }
-    fi
   fi
   verify_cmd "$repo" >/dev/null || err=1
 done

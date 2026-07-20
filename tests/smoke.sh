@@ -29,6 +29,7 @@ cd "$WS"
 
 # --- preflight
 "$MACHINES_AT_WORK/scripts/preflight.sh" >/dev/null || fail "preflight should pass"
+fout=$("$MACHINES_AT_WORK/scripts/freshen.sh"); [[ "$fout" == *"nothing to do"* ]] || fail "freshen must no-op under DONE=local"
 
 # --- new / next / start
 id=$("$MACHINES_AT_WORK/scripts/task.sh" new "Add greeting feature")
@@ -217,6 +218,25 @@ VERIFY_app="test -f ok.txt"
 EOF
 cd "$WS3"
 "$MACHINES_AT_WORK/scripts/preflight.sh" >/dev/null || fail "pr-mode preflight should pass"
+# freshen (decision #29): plan kickoff brings clean repos onto current upstream.
+# Advance origin/main from a throwaway clone, sit the repo on a clean task branch,
+# then freshen must move it onto main and ff to origin — without deleting the branch.
+git clone -q "$TMP/app-origin" "$TMP/app-clone"
+git -C "$TMP/app-clone" -c user.email=t@t -c user.name=t commit -qm "upstream advance" --allow-empty
+git -C "$TMP/app-clone" push -q origin main
+git -C "$WS3/app" checkout -qb stale-wip
+echo w > "$WS3/app/w.txt" && git -C "$WS3/app" add . && git -C "$WS3/app" commit -qm "dangling wip"
+"$MACHINES_AT_WORK/scripts/freshen.sh" >/dev/null || fail "freshen should succeed"
+[ "$(git -C "$WS3/app" rev-parse --abbrev-ref HEAD)" = "main" ] || fail "freshen should move a clean repo onto main"
+git -C "$WS3/app" rev-parse -q --verify stale-wip >/dev/null || fail "freshen must not delete a dangling task branch"
+[ "$(git -C "$WS3/app" rev-parse main)" = "$(git -C "$WS3/app" rev-parse origin/main)" ] || fail "freshen should ff local main to origin"
+git -C "$WS3/app" branch -qD stale-wip
+# a repo with uncommitted (tracked) changes is reported and left as-is
+echo dirty >> "$WS3/app/ok.txt"
+fout=$("$MACHINES_AT_WORK/scripts/freshen.sh" 2>&1)
+[[ "$fout" == *"uncommitted changes"* ]] || fail "freshen must report a dirty repo"
+grep -q dirty "$WS3/app/ok.txt" || fail "freshen must not clobber uncommitted changes"
+git -C "$WS3/app" checkout -q -- ok.txt
 idp=$("$MACHINES_AT_WORK/scripts/task.sh" new "Pr flow")
 "$MACHINES_AT_WORK/scripts/task.sh" start "$idp" >/dev/null
 echo feature > app/feat.txt
