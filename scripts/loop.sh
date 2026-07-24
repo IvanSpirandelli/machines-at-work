@@ -90,6 +90,19 @@ while [ "$n" -lt "$MAX_TASKS" ]; do
     fi
     break
   fi
+  # A task the planner gated on a human decision (`Decision: <question>`) must not
+  # be built blindly — the builder can't invent the call, so it would end with no
+  # committed work and the loop would respin on it forever. Ask the human on
+  # Telegram (reply-to-decide) and block so the queue stops here until task.sh
+  # resolve folds the answer in and reopens it. block is silenced so the human sees
+  # only ask.sh's question, not a duplicate generic "blocked" line.
+  decision=$(get_field "$(task_dir "$id")/task.md" Decision) || decision=""
+  if [ -n "$decision" ] && [ "$decision" != "-" ]; then
+    echo "── task $id needs a human decision — asking on Telegram and blocking"
+    NOTIFY_SILENT=1 "$SCRIPTS/task.sh" block "$id" "awaiting human decision: $decision" >/dev/null
+    "$SCRIPTS/ask.sh" "$id" "$decision" || true
+    continue
+  fi
   if [ -n "$SUBSCRIPTION" ]; then spent="subscription"; else spent="\$$total_cost"; fi
   echo "══ task $id (task $((n + 1))/$MAX_TASKS, spent $spent)"
   echo "Solving task with $MODEL_UC"

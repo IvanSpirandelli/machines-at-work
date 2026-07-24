@@ -365,6 +365,42 @@ grep -q "hello from smoke" "$CURL_LOG" || fail "notify: message text not sent"
 : > "$CURL_LOG"
 "$MACHINES_AT_WORK/scripts/notify.sh" "no creds here" >/dev/null
 [ -s "$CURL_LOG" ] && fail "notify: hit telegram without creds" || true
+# NOTIFY_SILENT suppresses only the telegram leg (still prints)
+: > "$CURL_LOG"
+TELEGRAM_BOT_TOKEN=tok TELEGRAM_CHAT_ID=42 NOTIFY_SILENT=1 \
+  "$MACHINES_AT_WORK/scripts/notify.sh" "quiet please" >/dev/null
+[ -s "$CURL_LOG" ] && fail "notify: NOTIFY_SILENT still hit telegram" || true
+
+# --- human-decision gate: a task marked `Decision: <question>` is asked on
+# Telegram (ask.sh posts the question + remembers message_id -> task), and
+# task.sh resolve folds the human's answer in and returns the task to todo.
+newtmpl=$("$MACHINES_AT_WORK/scripts/task.sh" new "Gated thing")
+grep -q "^Decision: -" machines-at-work/tasks/"$newtmpl"-*/task.md || fail "new task template missing Decision field"
+gmd=$(echo machines-at-work/tasks/"$newtmpl"-*/task.md)
+lib "set_field '$gmd' Decision 'wilt over 7 days or 3?'"
+[ "$(lib "get_field '$gmd' Decision")" = "wilt over 7 days or 3?" ] || fail "decision field not set"
+# ask.sh: stub curl to return a message_id, check the offer file records msg -> task
+cat > "$TMP/bin/curl" <<'EOF'
+#!/usr/bin/env bash
+echo '{"ok":true,"result":{"message_id":555}}'
+EOF
+chmod +x "$TMP/bin/curl"
+offers="$TMP/decision_offers.json"
+TELEGRAM_BOT_TOKEN=tok TELEGRAM_CHAT_ID=42 TELEGRAM_TOPIC_ID=9 DECISION_OFFERS_FILE="$offers" \
+  "$MACHINES_AT_WORK/scripts/ask.sh" "$newtmpl" "wilt over 7 days or 3?" >/dev/null
+python3 -c "import json,sys; o=json.load(open('$offers')); e=o['555']; sys.exit(0 if e['task']=='$newtmpl' and e['question']=='wilt over 7 days or 3?' else 1)" \
+  || fail "ask.sh did not remember the decision offer (msg 555 -> task $newtmpl)"
+# resolve: fold the answer, clear the gate, back to todo
+"$MACHINES_AT_WORK/scripts/task.sh" resolve "$newtmpl" "flowers 3 days; dishes consumed" >/dev/null
+[ "$(lib "get_field '$gmd' Decision")" = "-" ] || fail "resolve did not clear the Decision gate"
+grep -q "## Decision (resolved)" "$gmd" || fail "resolve did not record the decision section"
+grep -q "flowers 3 days; dishes consumed" "$gmd" || fail "resolve did not fold the answer text"
+grep -q "^Status: todo" "$gmd" || fail "resolve did not return the task to todo"
+# a legacy task with no Decision field is not a false gate (get_field → empty)
+legacy=$("$MACHINES_AT_WORK/scripts/task.sh" new "Ungated")
+lmd=$(echo machines-at-work/tasks/"$legacy"-*/task.md)
+perl -ni -e 'print unless /^Decision:/' "$lmd"   # simulate a pre-feature task
+d=$(lib "get_field '$lmd' Decision" || true); [ -z "$d" ] || fail "missing Decision field should read empty, got '$d'"
 
 # --- inbound.sh: server drops raw messages into updates/.inbox/, inbound.sh
 # turns them into updates/ notes (oldest first) and drains the inbox. No inbox
