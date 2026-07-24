@@ -69,6 +69,19 @@ echo "$diag" | grep -q "^task 0002 blocked commits=no review=none faillog=no" ||
 echo "$diag" | grep -q "reason: unclear spec" || fail "diagnose: NEEDS_HUMAN reason not surfaced"
 echo "$diag" | grep -q "0001" && fail "diagnose: must not list a done task" || true
 
+# --- clean-repo + diagnose workspace scan: a dirty tree with NO blocked/
+# in-progress task is invisible to the task loop yet preflight hard-fails on it.
+# diagnose must surface it; clean-repo must recoverably clear it (stash, not lose).
+echo "stray edit" >> app/ok.txt   # dirty a tracked file with no task involved
+diag=$("$MACHINES_AT_WORK/scripts/task.sh" diagnose)
+echo "$diag" | grep -q "^workspace app dirty on" || fail "diagnose: dirty workspace not surfaced"
+"$MACHINES_AT_WORK/scripts/preflight.sh" --quick >/dev/null 2>&1 && fail "preflight should fail on a dirty tree" || true
+"$MACHINES_AT_WORK/scripts/task.sh" clean-repo app | grep -q stashed || fail "clean-repo should stash a dirty tree"
+{ git -C app diff --quiet && git -C app diff --cached --quiet; } || fail "clean-repo left the tree dirty"
+git -C app stash list | grep -q "unblock clean-repo" || fail "clean-repo did not leave a recoverable stash"
+"$MACHINES_AT_WORK/scripts/task.sh" clean-repo app | grep -q "already clean" || fail "clean-repo on clean tree should no-op"
+git -C app stash drop >/dev/null 2>&1   # tidy the scratch repo
+
 "$MACHINES_AT_WORK/scripts/task.sh" next >/dev/null && fail "blocked task must not be next" || true
 "$MACHINES_AT_WORK/scripts/task.sh" reopen "$id2" >/dev/null
 [ "$("$MACHINES_AT_WORK/scripts/task.sh" next)" = "0002" ] || fail "reopened task should be next"

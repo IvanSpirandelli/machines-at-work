@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Task lifecycle. Deterministic — no LLM involved.
-# Usage: task.sh new "<title>" [repos] [feature] | start <id> | next | status | diagnose | done <id> | sync | block <id> "<reason>" | reopen <id> | abandon <id>
+# Usage: task.sh new "<title>" [repos] [feature] | start <id> | next | status | diagnose | done <id> | sync | block <id> "<reason>" | reopen <id> | abandon <id> | clean-repo <repo>
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
@@ -141,7 +141,7 @@ cmd_diagnose() {
   # each blocked/in-progress task and each blocked feature with its recovery
   # signals — has-commits, review verdict, whether a loop-fail.log exists, and the
   # NEEDS_HUMAN reason. Deterministic data-gathering; the judgment is the skill's.
-  local vcolor d md id status fmd found=0 review
+  local vcolor d md id status fmd found=0 review repo path branch
   if "$(dirname "${BASH_SOURCE[0]}")/verify.sh" >/dev/null 2>&1; then vcolor=GREEN; else vcolor=RED; fi
   echo "verify: $vcolor"
   for d in "$TASKS"/[0-9]*/; do
@@ -164,7 +164,36 @@ cmd_diagnose() {
     printf 'feature %s blocked\n' "$(basename "$fmd" .md)"
     echo "  reason: $(human_reason "feature $(basename "$fmd" .md)")"
   done
+  # Workspace cleanliness — independent of task status. A build session that died
+  # after editing files but before committing (or once its task was reset to todo)
+  # leaves a dirty tree that preflight hard-fails on, while NO task is
+  # blocked/in-progress — so the loop above sees nothing and unblock used to find
+  # nothing to do. Surface it as its own signal; clean-repo (below) resolves it.
+  for repo in $REPOS; do
+    path="$(repo_path "$repo")" || continue
+    [ -d "$path" ] || continue
+    if ! { git -C "$path" diff --quiet && git -C "$path" diff --cached --quiet \
+           && [ -z "$(git -C "$path" ls-files --others --exclude-standard)" ]; }; then
+      found=1; branch=$(git -C "$path" rev-parse --abbrev-ref HEAD 2>/dev/null)
+      printf 'workspace %s dirty on %s\n' "$repo" "${branch:-?}"
+    fi
+  done
   [ "$found" = 1 ] || echo "(nothing blocked or in-progress)"
+}
+
+cmd_clean_repo() { # Recoverably clear a repo's dirty working tree so preflight
+  # passes again. Safe by construction: `git stash push -u` never discards — the
+  # snapshot is recoverable with `git -C <path> stash list/pop`. The scaffold only
+  # ever lands work as commits on task branches, so a dirty tree is always a
+  # crashed session's leftover; stashing (not resetting) keeps it if it mattered.
+  local repo="${1:?usage: task.sh clean-repo <repo>}" path
+  path=$(repo_path "$repo")
+  if git -C "$path" diff --quiet && git -C "$path" diff --cached --quiet \
+     && [ -z "$(git -C "$path" ls-files --others --exclude-standard)" ]; then
+    echo "clean-repo: $repo already clean"; return 0
+  fi
+  git -C "$path" stash push -u -m "unblock clean-repo $(date -u +%FT%TZ)" >/dev/null
+  echo "clean-repo: $repo stashed (recover: git -C $path stash list)"
 }
 
 feature_md() { echo "$TASKS/_features/$1.md"; }
@@ -417,6 +446,6 @@ cmd_abandon() { # discard an empty/unwanted task branch and reset to todo. Safe:
 }
 
 case "${1:-}" in
-  new|start|next|status|diagnose|done|sync|block|reopen|abandon) c="$1"; shift; "cmd_$c" "$@" ;;
+  new|start|next|status|diagnose|done|sync|block|reopen|abandon|clean-repo) c="${1//-/_}"; shift; "cmd_$c" "$@" ;;
   *) usage ;;
 esac
