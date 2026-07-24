@@ -59,6 +59,29 @@ git -C app rev-parse -q --verify task/0001-add-greeting-feature >/dev/null && fa
 id2=$("$MACHINES_AT_WORK/scripts/task.sh" new "Second thing")
 "$MACHINES_AT_WORK/scripts/task.sh" block "$id2" "unclear spec" >/dev/null
 grep -q "unclear spec" machines-at-work/NEEDS_HUMAN.md || fail "no NEEDS_HUMAN entry"
+
+# --- diagnose: read-only report the unblock skill judges on — global verify
+# color, plus each blocked/in-progress item with its facts and NEEDS_HUMAN reason.
+# id2 is blocked with no commits; verify is GREEN (ok.txt present); id1 is done.
+diag=$("$MACHINES_AT_WORK/scripts/task.sh" diagnose)
+echo "$diag" | grep -q "^verify: GREEN" || fail "diagnose: missing/ wrong verify color"
+echo "$diag" | grep -q "^task 0002 blocked commits=no review=none faillog=no" || fail "diagnose: blocked task facts wrong"
+echo "$diag" | grep -q "reason: unclear spec" || fail "diagnose: NEEDS_HUMAN reason not surfaced"
+echo "$diag" | grep -q "0001" && fail "diagnose: must not list a done task" || true
+
+# --- clean-repo + diagnose workspace scan: a dirty tree with NO blocked/
+# in-progress task is invisible to the task loop yet preflight hard-fails on it.
+# diagnose must surface it; clean-repo must recoverably clear it (stash, not lose).
+echo "stray edit" >> app/ok.txt   # dirty a tracked file with no task involved
+diag=$("$MACHINES_AT_WORK/scripts/task.sh" diagnose)
+echo "$diag" | grep -q "^workspace app dirty on" || fail "diagnose: dirty workspace not surfaced"
+"$MACHINES_AT_WORK/scripts/preflight.sh" --quick >/dev/null 2>&1 && fail "preflight should fail on a dirty tree" || true
+"$MACHINES_AT_WORK/scripts/task.sh" clean-repo app | grep -q stashed || fail "clean-repo should stash a dirty tree"
+{ git -C app diff --quiet && git -C app diff --cached --quiet; } || fail "clean-repo left the tree dirty"
+git -C app stash list | grep -q "unblock clean-repo" || fail "clean-repo did not leave a recoverable stash"
+"$MACHINES_AT_WORK/scripts/task.sh" clean-repo app | grep -q "already clean" || fail "clean-repo on clean tree should no-op"
+git -C app stash drop >/dev/null 2>&1   # tidy the scratch repo
+
 "$MACHINES_AT_WORK/scripts/task.sh" next >/dev/null && fail "blocked task must not be next" || true
 "$MACHINES_AT_WORK/scripts/task.sh" reopen "$id2" >/dev/null
 [ "$("$MACHINES_AT_WORK/scripts/task.sh" next)" = "0002" ] || fail "reopened task should be next"
