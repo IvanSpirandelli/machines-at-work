@@ -96,6 +96,23 @@ rc=0; "$MACHINES_AT_WORK/scripts/task.sh" next >/dev/null 2>&1 || rc=$?
   || fail "CONTINUE_ON_BLOCK=1 should skip the block to the next todo"
 "$MACHINES_AT_WORK/scripts/task.sh" reopen "$id2" >/dev/null   # restore for later tests
 
+# --- smoke gate: SMOKE_<repo> boot check (optional, gated, skippable)
+V="$MACHINES_AT_WORK/scripts/verify.sh"
+"$V" >/dev/null || fail "smoke: a repo with no SMOKE_app must verify exactly as before"
+SMOKE_app="touch smoked.txt" "$V" >/dev/null || fail "smoke: a passing smoke command must stay green"
+[ -f app/smoked.txt ] || fail "smoke: command must run inside the repo dir"
+rm -f app/smoked.txt
+SMOKE_app="exit 3" "$V" >/dev/null 2>&1 && fail "smoke: a failing smoke command must fail verify" || true
+out=$(SMOKE_app="exit 3" "$V" 2>&1 || true)
+echo "$out" | grep -q "FAIL: app (smoke)" || fail "smoke: failure must name the repo and the phase"
+SMOKE_app="exit 3" "$V" --no-smoke >/dev/null || fail "smoke: --no-smoke must skip the smoke command"
+out=$(SMOKE_TIMEOUT=1 SMOKE_app="sleep 5" "$V" 2>&1 || true)
+echo "$out" | grep -q "timed out" || fail "smoke: SMOKE_TIMEOUT must fire and say so"
+mv app/ok.txt app/ok.hidden   # red verify: smoke must not run at all
+SMOKE_app="touch smoked.txt" "$V" >/dev/null 2>&1 && fail "smoke: red verify must still fail" || true
+[ ! -f app/smoked.txt ] || fail "smoke: must not run when the repo's verify failed"
+mv app/ok.hidden app/ok.txt
+
 # --- red verify blocks done
 "$MACHINES_AT_WORK/scripts/task.sh" start "$id2" >/dev/null
 "$MACHINES_AT_WORK/scripts/task.sh" start "$id2" >/dev/null || fail "start must resume an in-progress task"

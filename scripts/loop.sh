@@ -218,7 +218,8 @@ except Exception as e:
       else
         # Can't finish and can't usefully resume — block, naming the verify color so
         # a human can tell finished-but-unmerged (GREEN) from genuinely broken (RED).
-        if "$SCRIPTS/verify.sh" >/dev/null 2>&1; then vcolor="verify GREEN"; else vcolor="verify RED"; fi
+        # --no-smoke: this only colors a block reason; booting the app proves nothing here.
+        if "$SCRIPTS/verify.sh" --no-smoke >/dev/null 2>&1; then vcolor="verify GREEN"; else vcolor="verify RED"; fi
         "$SCRIPTS/task.sh" block "$id" "loop.sh: still in-progress after $resume resume attempt(s); $vcolor${fail_reason:+ — last failure: $fail_reason}"
         status=blocked
       fi
