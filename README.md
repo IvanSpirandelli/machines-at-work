@@ -42,7 +42,7 @@ Every script finds the workspace on its own by walking up from the current direc
 | Script | What it does |
 |---|---|
 | `preflight.sh [--quick]` | Validate before agents run: repos exist and are clean, config sane, then a full verify run (`--quick` skips the verify). With `DONE=pr` it also checks `gh` auth + origin, fast-forwards each repo's default branch, and runs `task.sh sync`. Exit 3 means origin's default branch itself is red (wait it out, not your fault). |
-| `verify.sh [repo …]` | The deterministic quality gate: runs each repo's `VERIFY_<repo>` command from agents.env. No args = all repos. Run it any time; it changes nothing. |
+| `verify.sh [--no-smoke] [repo …]` | The deterministic quality gate: runs each repo's `VERIFY_<repo>` command from agents.env, then its optional `SMOKE_<repo>` boot check — the app starts and answers (killed after `SMOKE_TIMEOUT`, default 300s; a repo that fails its own tests is never smoked). No args = all repos. Verify alone changes nothing, but a smoke command starts things — `--no-smoke` is the pure read-only color. |
 | `task.sh new "<title>" [repos]` | Create the next `NNNN-slug` task folder; prints the id. Then fill in Goal / Acceptance criteria (usually `/machines-at-work:plan` does this). |
 | `task.sh start <id>` | Check out the task branch in each affected repo (creates it from the default branch, or resumes an existing one). |
 | `task.sh next` / `task.sh status` | Print the first actionable task id — a todo, or an in-progress one to resume (so a killed session's orphan is picked back up and its dependents wait) / the full task table. Read-only. |
@@ -53,7 +53,7 @@ Every script finds the workspace on its own by walking up from the current direc
 | `loop.sh` | Headless driver: runs `claude -p "/machines-at-work:build <id>"` with a fresh context per task. Caps via env vars: `MAX_TASKS` (default 5), `MAX_COST_USD` (15; skipped on a Claude subscription), `MAX_RESUME` (3 retries for sessions that die mid-task), `LIMIT_BACKOFF` / `UPSTREAM_BACKOFF` (seconds, default 1800). Run it from the project root. |
 | `notify.sh "<msg>"` | The human-comms seam: prints, plus a macOS notification; a Telegram curl is sketched in the script — wire it in when async approval becomes the bottleneck. |
 
-`preflight.sh`, `verify.sh`, `task.sh status`, and `task.sh sync` are safe to run by hand whenever you're curious; the rest mutate task state and are normally driven by `/machines-at-work:build` or `loop.sh`.
+`preflight.sh`, `verify.sh` (`--no-smoke` if the project defines smoke commands — those start containers), `task.sh status`, and `task.sh sync` are safe to run by hand whenever you're curious; the rest mutate task state and are normally driven by `/machines-at-work:build` or `loop.sh`.
 
 ## Layout
 

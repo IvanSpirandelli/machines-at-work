@@ -143,7 +143,8 @@ cmd_diagnose() {
   # signals — has-commits, review verdict, whether a loop-fail.log exists, and the
   # NEEDS_HUMAN reason. Deterministic data-gathering; the judgment is the skill's.
   local vcolor d md id status fmd found=0 review repo path branch
-  if "$(dirname "${BASH_SOURCE[0]}")/verify.sh" >/dev/null 2>&1; then vcolor=GREEN; else vcolor=RED; fi
+  # --no-smoke: diagnose is documented read-only, and a smoke command starts things.
+  if "$(dirname "${BASH_SOURCE[0]}")/verify.sh" --no-smoke >/dev/null 2>&1; then vcolor=GREEN; else vcolor=RED; fi
   echo "verify: $vcolor"
   for d in "$TASKS"/[0-9]*/; do
     md="$d/task.md"; [ -f "$md" ] || continue

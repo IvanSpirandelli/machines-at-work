@@ -34,6 +34,12 @@ verify_cmd() { # verify_cmd <name> -> command string
   echo "${!var:?agents.env must set VERIFY_$1}"
 }
 
+smoke_cmd() { # smoke_cmd <name> -> command string, empty when the repo defines none
+  # Optional (`:-`), unlike verify_cmd's `:?`: most repos have nothing to boot.
+  local var="SMOKE_$1"
+  echo "${!var:-}"
+}
+
 task_dir() { # task_dir <id> -> path (fails if missing)
   local d
   d=$(ls -d "$TASKS/$1-"*/ 2>/dev/null | head -1) || true
