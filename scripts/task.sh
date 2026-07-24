@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Task lifecycle. Deterministic — no LLM involved.
-# Usage: task.sh new "<title>" [repos] [feature] | start <id> | next | status | diagnose | done <id> | sync | block <id> "<reason>" | reopen <id> | abandon <id> | clean-repo <repo>
+# Usage: task.sh new "<title>" [repos] [feature] | start <id> | next | status | diagnose | done <id> | sync | block <id> "<reason>" | reopen <id> | abandon <id> | clean-repo <repo> | resolve <id> "<decision>"
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
@@ -54,6 +54,7 @@ Commits: -
 PR: -
 Rounds: 0
 Cost: -
+Decision: -
 
 ## Goal
 
@@ -413,6 +414,20 @@ cmd_block() {
   echo "blocked $id"
 }
 
+cmd_resolve() { # fold a human's decision into a gated task and return it to the queue.
+  # A task the planner marked `Decision: <question>` was asked on Telegram and
+  # blocked (loop.sh); this records the human's answer where the builder will read
+  # it, clears the gate, and resets to todo so the next build implements it.
+  local id="${1:?task id}" answer="${2:?decision text}" dir md
+  dir=$(task_dir "$id"); md="$dir/task.md"
+  set_field "$md" Decision -
+  printf '\n## Decision (resolved)\n\n%s\n' "$answer" >> "$md"
+  set_field "$md" Status todo
+  snapshot_ws "task $id decision recorded: $answer"
+  "$(dirname "${BASH_SOURCE[0]}")/notify.sh" "Task $id decision recorded: $answer — back in the queue" || true
+  echo "resolved $id"
+}
+
 cmd_reopen() {
   local id="${1:?task id}" dir md
   dir=$(task_dir "$id"); md="$dir/task.md"
@@ -446,6 +461,6 @@ cmd_abandon() { # discard an empty/unwanted task branch and reset to todo. Safe:
 }
 
 case "${1:-}" in
-  new|start|next|status|diagnose|done|sync|block|reopen|abandon|clean-repo) c="${1//-/_}"; shift; "cmd_$c" "$@" ;;
+  new|start|next|status|diagnose|done|sync|block|reopen|abandon|clean-repo|resolve) c="${1//-/_}"; shift; "cmd_$c" "$@" ;;
   *) usage ;;
 esac

@@ -24,7 +24,10 @@ while [ "$dir" != "/" ]; do
   dir="$(dirname "$dir")"
 done
 
-if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+# NOTIFY_SILENT suppresses only the Telegram leg (still prints + macOS notifies):
+# a caller pairing notify with a richer own message (e.g. ask.sh's decision
+# question) sets it so the human sees one message, not two.
+if [ -z "${NOTIFY_SILENT:-}" ] && [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
   curl -fsS "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
     --data-urlencode "chat_id=$TELEGRAM_CHAT_ID" \
     ${TELEGRAM_TOPIC_ID:+--data-urlencode "message_thread_id=$TELEGRAM_TOPIC_ID"} \
